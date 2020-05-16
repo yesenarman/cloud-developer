@@ -18,14 +18,56 @@ router.get('/', async (req: Request, res: Response) => {
 
 //@TODO
 //Add an endpoint to GET a specific resource by Primary Key
+router.get('/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).send({ message: 'id param is required' });
+    }
+
+    const item: FeedItem = await FeedItem.findByPk(id);
+    if (!item) {
+        return res.status(404).send({ message: 'feed item not found'});
+    }
+    if (item.url) {
+        item.url = AWS.getGetSignedUrl(item.url);
+    }
+    return res.json(item);
+});
 
 // update a specific resource
 router.patch('/:id', 
     requireAuth, 
     async (req: Request, res: Response) => {
-        //@TODO try it yourself
-        res.send(500).send("not implemented")
-});
+        const { id } = req.params;
+        const caption = req.body.caption;
+        const fileName = req.body.url;
+        if (!id) {
+            return res.status(400).send({ message: 'id param is required' });
+        }
+
+        const keys : {
+            caption?: string,
+            url?: string
+        } = {};
+        if (caption) {
+            keys.caption = caption;
+        }
+        if (fileName) {
+            keys.url = fileName;
+        }
+
+        let item = await FeedItem.findByPk(id);
+        if (!item) {
+            return res.status(404).send({ message: 'feed item not found'});
+        }
+
+        item = await item.update(keys);
+        if(item.url) {
+            item.url = AWS.getGetSignedUrl(item.url);
+        }
+        return res.json(item);
+    }
+);
 
 
 // Get a signed url to put a new item in the bucket
