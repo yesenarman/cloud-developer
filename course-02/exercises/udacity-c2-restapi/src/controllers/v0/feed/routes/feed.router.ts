@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { FeedItem } from '../models/FeedItem';
 import { requireAuth } from '../../users/routes/auth.router';
 import * as AWS from '../../../../aws';
+import * as ImageFilterService from '../../../../image-filter';
 
 const router: Router = Router();
 
@@ -18,14 +19,61 @@ router.get('/', async (req: Request, res: Response) => {
 
 //@TODO
 //Add an endpoint to GET a specific resource by Primary Key
+router.get('/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).send({ message: 'id param is required' });
+    }
+
+    const item: FeedItem = await FeedItem.findByPk(id);
+    if (!item) {
+        return res.status(404).send({ message: 'feed item not found'});
+    }
+    if (item.url) {
+        item.url = AWS.getGetSignedUrl(item.url);
+    }
+    return res.json(item);
+});
 
 // update a specific resource
 router.patch('/:id', 
     requireAuth, 
     async (req: Request, res: Response) => {
-        //@TODO try it yourself
-        res.send(500).send("not implemented")
-});
+        const { id } = req.params;
+        const caption = req.body.caption;
+        const fileName = req.body.url;
+        if (!id) {
+            return res.status(400).send({ message: 'id param is required' });
+        }
+
+        const keys : {
+            caption?: string,
+            url?: string
+        } = {};
+        if (caption) {
+            keys.caption = caption;
+        }
+        if (fileName) {
+            try {
+                keys.url = await filterImage(fileName);
+            } catch (e) {
+                console.error(e);
+                return res.status(500).send({ message: 'Error occurred while filtering the image.' });
+            }
+        }
+
+        let item = await FeedItem.findByPk(id);
+        if (!item) {
+            return res.status(404).send({ message: 'feed item not found'});
+        }
+
+        item = await item.update(keys);
+        if(item.url) {
+            item.url = AWS.getGetSignedUrl(item.url);
+        }
+        return res.json(item);
+    }
+);
 
 
 // Get a signed url to put a new item in the bucket
@@ -56,9 +104,17 @@ router.post('/',
         return res.status(400).send({ message: 'File url is required' });
     }
 
+    let filteredFilename;
+    try {
+        filteredFilename = await filterImage(fileName);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).send({ message: 'Error occurred while filtering the image.' });
+    }
+
     const item = await new FeedItem({
             caption: caption,
-            url: fileName
+            url: filteredFilename
     });
 
     const saved_item = await item.save();
@@ -66,5 +122,12 @@ router.post('/',
     saved_item.url = AWS.getGetSignedUrl(saved_item.url);
     res.status(201).send(saved_item);
 });
+
+async function filterImage(filename: string): Promise<string> {
+    const filteredFilename = `filtered/${filename}`;
+    const filteredImageBody = await ImageFilterService.filterImage(AWS.getGetSignedUrl(filename));
+    await AWS.putObject(filteredFilename, filteredImageBody);
+    return filteredFilename;
+}
 
 export const FeedRouter: Router = router;

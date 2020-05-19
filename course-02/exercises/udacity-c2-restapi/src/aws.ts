@@ -1,11 +1,13 @@
-import AWS = require('aws-sdk');
+import AWS from 'aws-sdk';
 import { config } from './config/config';
 
 const c = config.dev;
 
 //Configure AWS
-var credentials = new AWS.SharedIniFileCredentials({profile: 'default'});
-AWS.config.credentials = credentials;
+if (c.aws_profile !== "DEPLOYED") {
+  var credentials = new AWS.SharedIniFileCredentials({profile: c.aws_profile});
+  AWS.config.credentials = credentials;
+}
 
 export const s3 = new AWS.S3({
   signatureVersion: 'v4',
@@ -50,4 +52,21 @@ export function getPutSignedUrl( key: string ){
     });
 
     return url;
+}
+
+/* putObject stores the file
+ * @Params
+ *    key: string - the filename to be put into the s3 bucket
+ *    body: Buffer - the buffer with the file data
+ * @Returns:
+ *    a promise which fulfills sucessfully when the file is stored
+ */
+export async function putObject( key: string, body: Buffer ): Promise<Void> {
+  await s3
+    .putObject({
+      Bucket: c.aws_media_bucket,
+      Key: key,
+      Body: body
+    })
+    .promise();
 }
