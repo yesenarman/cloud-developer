@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { FeedItem } from '../models/FeedItem';
 import { requireAuth } from '../../users/routes/auth.router';
 import * as AWS from '../../../../aws';
+import * as ImageFilterService from '../../../../image-filter';
 
 const router: Router = Router();
 
@@ -53,7 +54,12 @@ router.patch('/:id',
             keys.caption = caption;
         }
         if (fileName) {
-            keys.url = fileName;
+            try {
+                keys.url = await filterImage(fileName);
+            } catch (e) {
+                console.error(e);
+                return res.status(500).send({ message: 'Error occurred while filtering the image.' });
+            }
         }
 
         let item = await FeedItem.findByPk(id);
@@ -98,9 +104,17 @@ router.post('/',
         return res.status(400).send({ message: 'File url is required' });
     }
 
+    let filteredFilename;
+    try {
+        filteredFilename = await filterImage(fileName);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).send({ message: 'Error occurred while filtering the image.' });
+    }
+
     const item = await new FeedItem({
             caption: caption,
-            url: fileName
+            url: filteredFilename
     });
 
     const saved_item = await item.save();
@@ -108,5 +122,12 @@ router.post('/',
     saved_item.url = AWS.getGetSignedUrl(saved_item.url);
     res.status(201).send(saved_item);
 });
+
+async function filterImage(filename: string): Promise<string> {
+    const filteredFilename = `filtered/${filename}`;
+    const filteredImageBody = await ImageFilterService.filterImage(AWS.getGetSignedUrl(filename));
+    await AWS.putObject(filteredFilename, filteredImageBody);
+    return filteredFilename;
+}
 
 export const FeedRouter: Router = router;
