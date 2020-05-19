@@ -61,7 +61,7 @@ export function getPutSignedUrl( key: string ){
  * @Returns:
  *    a promise which fulfills sucessfully when the file is stored
  */
-export async function putObject( key: string, body: Buffer ): Promise<Void> {
+export async function putObject( key: string, body: Buffer ): Promise<void> {
   await s3
     .putObject({
       Bucket: c.aws_media_bucket,

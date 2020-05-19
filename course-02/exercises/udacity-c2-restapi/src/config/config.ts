@@ -9,7 +9,8 @@ export const config = {
     "aws_profile": process.env.AWS_PROFILE,
     "aws_media_bucket": process.env.AWS_MEDIA_BUCKET,
     "jwt_secret": process.env.JWT_SECRET,
-    "image_filter_service_host": process.env.IMAGE_FILTER_SERVICE_HOST
+    "image_filter_service_host": process.env.IMAGE_FILTER_SERVICE_HOST,
+    "image_filter_service_api_key": process.env.IMAGE_FILTER_SERVICE_API_KEY
   },
   "prod": {
     "username": "",

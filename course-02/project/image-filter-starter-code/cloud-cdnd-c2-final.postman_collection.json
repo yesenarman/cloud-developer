@@ -8,6 +8,21 @@
 		{
 			"name": "http://localhost:8082/filteredimage?image_url=https://timedotcom.files.wordpress.com/2019/03/kitten-report.jpg",
 			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJ1ZGFjaXR5LWMyLXJlc3RhcGktZGV2IiwiaWF0IjoxNTg5ODU2MDY5fQ.oOvhujcIMpU3tYewFCuOsSzqp1mQhZZgBnCCManzhrw",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "X-API-Key",
+							"type": "string"
+						}
+					]
+				},
 				"method": "GET",
 				"header": [],
 				"url": {
